@@ -5,6 +5,8 @@ import javax.swing.*;
 import javax.sound.midi.*;
 import java.util.*;
 import java.awt.event.*;
+//the import that allows serialization
+import java.io.*;
 
 
 
@@ -59,6 +61,14 @@ public class Main {
         downTempo.addActionListener(new MyDownTempoListener());
         buttonBox.add(downTempo);
 
+        JButton serialize = new JButton("Serialize the file(SAVE)");
+        serialize.addActionListener(new MySendListener());
+        buttonBox.add(serialize);
+
+        JButton restore = new JButton("Restore the Saved File");
+        restore.addActionListener(new MyReadInListener());
+        buttonBox.add(restore);
+
         //add a new box with all the instrument names listed vertically
         Box nameBox = new Box(BoxLayout.Y_AXIS);
         for (int i = 0; i < 16; i++){
@@ -88,7 +98,7 @@ public class Main {
 
         setUpMidi();
 
-        theFrame.setBounds(50,50,300,300);
+        theFrame.setBounds(50,50,500,500);
         theFrame.pack();
         theFrame.setVisible(true);
     }//close method
@@ -199,4 +209,63 @@ public class Main {
         return event;
     }
 
+
+    //this is the event handler that saves the file
+    public class MySendListener implements ActionListener {
+
+        public void actionPerformed(ActionEvent a){
+
+            //boolean array to hold the state of each check box
+            boolean[] checkboxState = new boolean[256];
+
+
+            //walk through the checkbox list and get the state of each one storing in hte boolean array
+            for (int i = 0; i < 256; i++){
+
+                JCheckBox check = (JCheckBox) checkboxList.get(i);
+                if (check.isSelected()){
+                    checkboxState[i] = true;
+                }
+            }
+
+            try {
+                FileOutputStream fileStream = new FileOutputStream(new File("checkbox.ser"));
+                ObjectOutputStream os = new ObjectOutputStream(fileStream);
+                os.writeObject(checkboxState);
+
+            }catch(Exception ex){
+                ex.printStackTrace();
+            }
+        }//close method
+    }//close class
+
+    //this is what allows the program to read a saved file
+    public class MyReadInListener implements ActionListener {
+        public void actionPerformed(ActionEvent a){
+            boolean[] checkboxState = null;
+            try{
+
+                //this is where the file is read
+                FileInputStream fileIn = new FileInputStream(new File("Checkbox.ser"));
+                ObjectInputStream is = new ObjectInputStream(fileIn);
+                //need to re cast back to boolean array as it returns as a type of Object
+                checkboxState = (boolean[]) is.readObject();
+            } catch(Exception ex){
+                ex.printStackTrace();
+            }
+
+            for (int i = 0; i < 256; i++){
+                JCheckBox check = (JCheckBox) checkboxList.get(i);
+                if (checkboxState[i]){
+                    check.setSelected(true);
+                } else {
+                    check.setSelected(false);
+                }
+            }
+
+            //stop whatever is currently playing and rebuild the saved sequence
+            sequencer.stop();
+            buildTrackAndStart();
+        }
+    }
 }
